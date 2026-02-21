@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,11 +9,48 @@ import {
   ActivityIndicator,
   SafeAreaView,
   StatusBar,
+  Animated,
+  Easing,
 } from 'react-native';
 import { getUser, createUser } from '@/utils/firestore';
 import { hashPin } from '@/utils/pinHash';
 import { useAuth } from '@/context/AuthContext';
 import { COLORS, USERS, USER_COLORS } from '@/constants/theme';
+
+import TypewriterLogo from '@/components/TypewriterLogo';
+
+// ─── Animations ───────────────────────────────────────────────────────────────
+
+function ScanningLine() {
+  const scanAnim = useRef(new Animated.Value(-100)).current;
+
+  useEffect(() => {
+    const startScan = () => {
+      scanAnim.setValue(-100);
+      Animated.sequence([
+        Animated.delay(1000),
+        Animated.timing(scanAnim, {
+          toValue: 120,
+          duration: 3000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+      ]).start(() => startScan());
+    };
+    startScan();
+  }, [scanAnim]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.scanLine,
+        {
+          transform: [{ translateY: scanAnim }],
+        },
+      ]}
+    />
+  );
+}
 
 // ─── PIN Pad ──────────────────────────────────────────────────────────────────
 
@@ -189,8 +226,10 @@ export default function LoginScreen() {
       <View style={styles.header}>
         <View style={styles.logoFrame}>
           <View style={styles.logoGlow} />
-          <Text style={styles.appName}>SPLIT<Text style={styles.appNameAccent}>IT</Text></Text>
-          <Text style={styles.tagline}>SYNTHWAVE EXPENSE TRACKER</Text>
+          {/* Scanning Line Effect */}
+          <ScanningLine />
+          <TypewriterLogo />
+          <Text style={styles.tagline}>EXPENSE TRACKER #267</Text>
         </View>
 
         <View style={styles.gridFloor}>
@@ -304,17 +343,17 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.secondary,
     opacity: 0.16,
   },
-  appName: {
-    fontSize: 40,
-    fontWeight: '900',
-    color: COLORS.text,
-    letterSpacing: 5,
-    textShadowColor: COLORS.glow,
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
-  },
-  appNameAccent: {
-    color: COLORS.primary,
+  scanLine: {
+    position: 'absolute',
+    width: '120%',
+    height: 2,
+    backgroundColor: COLORS.primary,
+    opacity: 0.3,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    elevation: 5,
   },
   tagline: {
     marginTop: 8,
