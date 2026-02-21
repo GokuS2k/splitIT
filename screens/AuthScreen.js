@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -72,6 +72,47 @@ export default function AuthScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [logoText, setLogoText] = useState('');
+
+  useEffect(() => {
+    const fullText = 'SPLITIT';
+    let index = 0;
+    let deleting = false;
+    let timeoutId;
+
+    const tick = () => {
+      if (!deleting) {
+        index += 1;
+        setLogoText(fullText.slice(0, index));
+
+        if (index === fullText.length) {
+          timeoutId = setTimeout(() => {
+            deleting = true;
+            tick();
+          }, 1000);
+          return;
+        }
+
+        timeoutId = setTimeout(tick, 180);
+        return;
+      }
+
+      index -= 1;
+      setLogoText(fullText.slice(0, index));
+
+      if (index === 0) {
+        deleting = false;
+        timeoutId = setTimeout(tick, 250);
+        return;
+      }
+
+      timeoutId = setTimeout(tick, 90);
+    };
+
+    timeoutId = setTimeout(tick, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   const handleUserSelect = async (name) => {
     setChecking(true);
@@ -182,7 +223,7 @@ export default function AuthScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
       <View style={styles.header}>
-        <Text style={styles.appName}>SplitIT</Text>
+        <Text style={styles.appName}>{logoText}<Text style={styles.cursor}>|</Text></Text>
         <Text style={styles.tagline}>Split expenses. Stay friends.</Text>
       </View>
 
@@ -259,6 +300,9 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.primary,
     letterSpacing: -1,
+  },
+  cursor: {
+    opacity: 0.9,
   },
   tagline: {
     fontSize: 14,
