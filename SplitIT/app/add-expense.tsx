@@ -1,17 +1,8 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
-  SafeAreaView,
-  StatusBar,
-  KeyboardAvoidingView,
-  Platform,
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  ScrollView, Alert, ActivityIndicator, SafeAreaView,
+  StatusBar, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { addExpense } from '@/utils/firestore';
@@ -21,11 +12,8 @@ import { COLORS, CURRENCY, USERS, USER_COLORS } from '@/constants/theme';
 const SPLIT_TYPES = ['equal', 'percentage', 'exclude'];
 
 function computeSplits(
-  splitType: string,
-  amount: string,
-  paidBy: string,
-  percentages: Record<string, string>,
-  excluded: string[]
+  splitType: string, amount: string, paidBy: string,
+  percentages: Record<string, string>, excluded: string[]
 ): Record<string, number> | null {
   const num = parseFloat(amount);
   if (isNaN(num) || num <= 0) return null;
@@ -44,8 +32,7 @@ function computeSplits(
     if (Math.abs(total - 100) > 0.5) return null;
     const splits: Record<string, number> = {};
     USERS.forEach((u) => {
-      splits[u] =
-        Math.round(num * ((parseFloat(percentages[u]) || 0) / 100) * 100) / 100;
+      splits[u] = Math.round(num * ((parseFloat(percentages[u]) || 0) / 100) * 100) / 100;
     });
     return splits;
   }
@@ -84,26 +71,14 @@ export default function AddExpenseScreen() {
   };
 
   const handleSave = async () => {
-    if (!title.trim()) {
-      Alert.alert('Validation', 'Please enter a title.');
-      return;
-    }
+    if (!title.trim()) { Alert.alert('VALIDATION', 'Title required.'); return; }
     const num = parseFloat(amount);
-    if (isNaN(num) || num <= 0) {
-      Alert.alert('Validation', 'Please enter a valid amount.');
-      return;
-    }
+    if (isNaN(num) || num <= 0) { Alert.alert('VALIDATION', 'Enter a valid amount.'); return; }
 
     if (splitType === 'percentage') {
-      const total = USERS.reduce(
-        (s, u) => s + (parseFloat(percentages[u]) || 0),
-        0
-      );
+      const total = USERS.reduce((s, u) => s + (parseFloat(percentages[u]) || 0), 0);
       if (Math.abs(total - 100) > 0.5) {
-        Alert.alert(
-          'Validation',
-          `Percentages must add up to 100%. Currently: ${total.toFixed(1)}%`
-        );
+        Alert.alert('VALIDATION', `Percentages must total 100%. Current: ${total.toFixed(1)}%`);
         return;
       }
     }
@@ -111,26 +86,20 @@ export default function AddExpenseScreen() {
     if (splitType === 'exclude') {
       const included = USERS.filter((u) => !excluded.includes(u));
       if (included.length === 0) {
-        Alert.alert(
-          'Validation',
-          'At least one person must be included in the split.'
-        );
+        Alert.alert('VALIDATION', 'At least one person must be included.');
         return;
       }
     }
 
     const splits = computeSplits(splitType, amount, paidBy, percentages, excluded);
-    if (!splits) {
-      Alert.alert('Error', 'Could not compute splits. Please check your inputs.');
-      return;
-    }
+    if (!splits) { Alert.alert('ERROR', 'Could not compute splits.'); return; }
 
     setSaving(true);
     try {
       await addExpense({ title: title.trim(), amount: num, paidBy, splitType, splits });
       router.back();
     } catch {
-      Alert.alert('Error', 'Failed to save expense. Try again.');
+      Alert.alert('ERROR', 'Failed to save. Try again.');
     } finally {
       setSaving(false);
     }
@@ -152,34 +121,33 @@ export default function AddExpenseScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          showsVerticalScrollIndicator={false}
-        >
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+
+          {/* Header */}
           <View style={styles.headerRow}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-              <Text style={styles.backText}>← Back</Text>
+              <Text style={styles.backText}>◀ BACK</Text>
             </TouchableOpacity>
-            <Text style={styles.screenTitle}>Add Expense</Text>
+            <Text style={styles.screenTitle}>LOG EXPENSE</Text>
             <View style={{ width: 70 }} />
           </View>
+          <View style={styles.divider} />
 
-          <Text style={styles.label}>Title</Text>
+          {/* Title Input */}
+          <Text style={styles.label}>▸ DESCRIPTION</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g. Groceries, Pizza"
+            placeholder="e.g. GROCERIES, PIZZA"
             placeholderTextColor={COLORS.textMuted}
             value={title}
             onChangeText={setTitle}
           />
 
-          <Text style={styles.label}>Amount ({CURRENCY})</Text>
+          {/* Amount Input */}
+          <Text style={styles.label}>▸ AMOUNT ({CURRENCY})</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, styles.amountInput]}
             placeholder="0.00"
             placeholderTextColor={COLORS.textMuted}
             value={amount}
@@ -187,70 +155,58 @@ export default function AddExpenseScreen() {
             keyboardType="decimal-pad"
           />
 
-          <Text style={styles.label}>Paid by</Text>
+          {/* Paid By */}
+          <Text style={styles.label}>▸ PAID BY</Text>
           <View style={styles.segmentRow}>
-            {USERS.map((name) => (
-              <TouchableOpacity
-                key={name}
-                style={[
-                  styles.segmentBtn,
-                  paidBy === name && {
-                    backgroundColor: USER_COLORS[name] + '33',
-                    borderColor: USER_COLORS[name],
-                  },
-                ]}
-                onPress={() => setPaidBy(name)}
-              >
-                <Text
+            {USERS.map((name) => {
+              const c = USER_COLORS[name];
+              const active = paidBy === name;
+              return (
+                <TouchableOpacity
+                  key={name}
                   style={[
-                    styles.segmentText,
-                    paidBy === name && {
-                      color: USER_COLORS[name],
-                      fontWeight: '700',
-                    },
+                    styles.segmentBtn,
+                    active && { backgroundColor: c + '18', borderColor: c },
                   ]}
+                  onPress={() => setPaidBy(name)}
                 >
-                  {name}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text style={[styles.segmentText, active && { color: c, fontWeight: '800' }]}>
+                    {name.toUpperCase()}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
-          <Text style={styles.label}>Split type</Text>
+          {/* Split Type */}
+          <Text style={styles.label}>▸ SPLIT MODE</Text>
           <View style={styles.segmentRow}>
-            {SPLIT_TYPES.map((type) => (
-              <TouchableOpacity
-                key={type}
-                style={[
-                  styles.segmentBtn,
-                  splitType === type && styles.segmentBtnActive,
-                ]}
-                onPress={() => setSplitType(type)}
-              >
-                <Text
-                  style={[
-                    styles.segmentText,
-                    splitType === type && styles.segmentTextActive,
-                  ]}
+            {SPLIT_TYPES.map((type) => {
+              const active = splitType === type;
+              return (
+                <TouchableOpacity
+                  key={type}
+                  style={[styles.segmentBtn, active && styles.segmentBtnActive]}
+                  onPress={() => setSplitType(type)}
                 >
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+                    {type === 'equal' ? 'EQUAL' : type === 'percentage' ? 'PCT %' : 'CUSTOM'}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
+          {/* Split Details */}
           <View style={styles.splitSection}>
             {splitType === 'equal' && (
               <View style={styles.equalInfo}>
-                <Text style={styles.equalInfoText}>{equalShare()}</Text>
+                <Text style={styles.splitHint}>{equalShare()}</Text>
                 {USERS.map((u) => (
                   <View key={u} style={styles.splitRow}>
-                    <Text style={[styles.splitName, { color: USER_COLORS[u] }]}>{u}</Text>
+                    <Text style={[styles.splitName, { color: USER_COLORS[u] }]}>{u.toUpperCase()}</Text>
                     <Text style={styles.splitValue}>
-                      {CURRENCY}
-                      {parseFloat(amount) > 0
-                        ? (parseFloat(amount) / USERS.length).toFixed(2)
-                        : '0.00'}
+                      {CURRENCY}{parseFloat(amount) > 0 ? (parseFloat(amount) / USERS.length).toFixed(2) : '0.00'}
                     </Text>
                   </View>
                 ))}
@@ -260,23 +216,16 @@ export default function AddExpenseScreen() {
             {splitType === 'percentage' && (
               <View>
                 <Text style={styles.splitHint}>
-                  Total:{' '}
-                  {USERS.reduce(
-                    (s, u) => s + (parseFloat(percentages[u]) || 0),
-                    0
-                  ).toFixed(1)}
-                  % (must be 100%)
+                  TOTAL: {USERS.reduce((s, u) => s + (parseFloat(percentages[u]) || 0), 0).toFixed(1)}% / 100%
                 </Text>
                 {USERS.map((u) => (
                   <View key={u} style={styles.splitRow}>
-                    <Text style={[styles.splitName, { color: USER_COLORS[u] }]}>{u}</Text>
+                    <Text style={[styles.splitName, { color: USER_COLORS[u] }]}>{u.toUpperCase()}</Text>
                     <View style={styles.pctRow}>
                       <TextInput
                         style={styles.pctInput}
                         value={percentages[u]}
-                        onChangeText={(val) =>
-                          setPercentages((prev) => ({ ...prev, [u]: val }))
-                        }
+                        onChangeText={(val) => setPercentages((prev) => ({ ...prev, [u]: val }))}
                         keyboardType="decimal-pad"
                         maxLength={5}
                       />
@@ -285,10 +234,7 @@ export default function AddExpenseScreen() {
                     <Text style={styles.splitValue}>
                       {CURRENCY}
                       {parseFloat(amount) > 0 && parseFloat(percentages[u]) > 0
-                        ? (
-                            parseFloat(amount) *
-                            (parseFloat(percentages[u]) / 100)
-                          ).toFixed(2)
+                        ? (parseFloat(amount) * (parseFloat(percentages[u]) / 100)).toFixed(2)
                         : '0.00'}
                     </Text>
                   </View>
@@ -299,69 +245,38 @@ export default function AddExpenseScreen() {
             {splitType === 'exclude' && (
               <View>
                 <Text style={styles.splitHint}>
-                  {excludeShare()} — {includedCount} of {USERS.length} included
+                  {excludeShare()}  ·  {includedCount}/{USERS.length} INCLUDED
                 </Text>
-                {USERS.map((u) => (
-                  <TouchableOpacity
-                    key={u}
-                    style={styles.excludeRow}
-                    onPress={() => toggleExclude(u)}
-                  >
-                    <View
-                      style={[
-                        styles.checkbox,
-                        !excluded.includes(u) && {
-                          backgroundColor: USER_COLORS[u],
-                          borderColor: USER_COLORS[u],
-                        },
-                      ]}
-                    >
-                      {!excluded.includes(u) && (
-                        <Text style={styles.checkmark}>✓</Text>
-                      )}
-                    </View>
-                    <Text
-                      style={[
-                        styles.splitName,
-                        {
-                          color: excluded.includes(u)
-                            ? COLORS.textMuted
-                            : USER_COLORS[u],
-                        },
-                      ]}
-                    >
-                      {u}
-                    </Text>
-                    {!excluded.includes(u) && (
-                      <Text style={styles.splitValue}>
-                        {CURRENCY}
-                        {parseFloat(amount) > 0 && includedCount > 0
-                          ? (parseFloat(amount) / includedCount).toFixed(2)
-                          : '0.00'}
+                {USERS.map((u) => {
+                  const isExcluded = excluded.includes(u);
+                  return (
+                    <TouchableOpacity key={u} style={styles.excludeRow} onPress={() => toggleExclude(u)}>
+                      <View style={[styles.checkbox, !isExcluded && { backgroundColor: USER_COLORS[u], borderColor: USER_COLORS[u] }]}>
+                        {!isExcluded && <Text style={styles.checkmark}>✓</Text>}
+                      </View>
+                      <Text style={[styles.splitName, { color: isExcluded ? COLORS.textMuted : USER_COLORS[u] }]}>
+                        {u.toUpperCase()}
                       </Text>
-                    )}
-                    {excluded.includes(u) && (
-                      <Text style={[styles.splitValue, { color: COLORS.textMuted }]}>
-                        excluded
+                      <Text style={[styles.splitValue, isExcluded && { color: COLORS.textMuted }]}>
+                        {isExcluded
+                          ? 'SKIP'
+                          : `${CURRENCY}${parseFloat(amount) > 0 && includedCount > 0 ? (parseFloat(amount) / includedCount).toFixed(2) : '0.00'}`}
                       </Text>
-                    )}
-                  </TouchableOpacity>
-                ))}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             )}
           </View>
 
-          <TouchableOpacity
-            style={[styles.saveBtn, saving && { opacity: 0.6 }]}
-            onPress={handleSave}
-            disabled={saving}
-          >
-            {saving ? (
-              <ActivityIndicator color={COLORS.text} />
-            ) : (
-              <Text style={styles.saveBtnText}>Save Expense</Text>
-            )}
+          {/* Save Button */}
+          <TouchableOpacity style={[styles.saveBtn, saving && { opacity: 0.5 }]} onPress={handleSave} disabled={saving}>
+            {saving
+              ? <ActivityIndicator color={COLORS.background} />
+              : <Text style={styles.saveBtnText}>⊕  COMMIT EXPENSE</Text>
+            }
           </TouchableOpacity>
+
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -372,124 +287,75 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   scroll: { padding: 20, paddingBottom: 60 },
   headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 28,
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', marginBottom: 12,
   },
   backBtn: { width: 70 },
-  backText: { color: COLORS.primary, fontSize: 16 },
-  screenTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.text,
-    textAlign: 'center',
-  },
+  backText: { color: COLORS.primary, fontSize: 12, fontWeight: '700', letterSpacing: 2 },
+  screenTitle: { fontSize: 16, fontWeight: '900', color: COLORS.text, letterSpacing: 3 },
+  divider: { height: 1, backgroundColor: COLORS.border, marginBottom: 20 },
   label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginBottom: 8,
-    marginTop: 20,
+    fontSize: 11, fontWeight: '700', color: COLORS.primary,
+    letterSpacing: 3, marginBottom: 8, marginTop: 20,
   },
   input: {
-    backgroundColor: COLORS.card,
-    borderRadius: 14,
-    padding: 16,
-    color: COLORS.text,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    backgroundColor: COLORS.card, borderRadius: 4, padding: 16,
+    color: COLORS.text, fontSize: 15, borderWidth: 1, borderColor: COLORS.border,
+    letterSpacing: 1,
+  },
+  amountInput: {
+    fontSize: 24, fontWeight: '800', color: COLORS.primary,
+    letterSpacing: 2, borderColor: COLORS.borderBright,
   },
   segmentRow: { flexDirection: 'row', gap: 8 },
   segmentBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: COLORS.card,
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
+    flex: 1, paddingVertical: 12, borderRadius: 4,
+    backgroundColor: COLORS.card, alignItems: 'center',
+    borderWidth: 1, borderColor: COLORS.border,
   },
-  segmentBtnActive: {
-    backgroundColor: COLORS.primary + '22',
-    borderColor: COLORS.primary,
-  },
-  segmentText: { color: COLORS.textSecondary, fontSize: 14, fontWeight: '500' },
-  segmentTextActive: { color: COLORS.primary, fontWeight: '700' },
+  segmentBtnActive: { backgroundColor: COLORS.primary + '18', borderColor: COLORS.primary },
+  segmentText: { color: COLORS.textSecondary, fontSize: 11, fontWeight: '700', letterSpacing: 1.5 },
+  segmentTextActive: { color: COLORS.primary, fontWeight: '800' },
   splitSection: {
-    marginTop: 20,
-    backgroundColor: COLORS.card,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    marginTop: 20, backgroundColor: COLORS.card,
+    borderRadius: 4, padding: 16, borderWidth: 1, borderColor: COLORS.border,
   },
   equalInfo: { gap: 4 },
-  equalInfoText: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    marginBottom: 10,
-    textAlign: 'center',
-  },
   splitHint: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    marginBottom: 12,
-    textAlign: 'center',
+    fontSize: 11, color: COLORS.textSecondary, marginBottom: 12,
+    textAlign: 'center', letterSpacing: 2, fontWeight: '700',
   },
   splitRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
-  splitName: { flex: 1, fontSize: 16, fontWeight: '600' },
+  splitName: { flex: 1, fontSize: 13, fontWeight: '800', letterSpacing: 2 },
   splitValue: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
-    minWidth: 70,
-    textAlign: 'right',
+    fontSize: 13, fontWeight: '700', color: COLORS.textSecondary,
+    minWidth: 70, textAlign: 'right',
   },
   pctRow: { flexDirection: 'row', alignItems: 'center', marginRight: 12 },
   pctInput: {
-    backgroundColor: COLORS.cardAlt,
-    borderRadius: 8,
-    padding: 6,
-    color: COLORS.text,
-    fontSize: 15,
-    width: 56,
-    textAlign: 'center',
+    backgroundColor: COLORS.cardAlt, borderRadius: 2, padding: 6,
+    color: COLORS.primary, fontSize: 14, width: 56, textAlign: 'center',
+    borderWidth: 1, borderColor: COLORS.borderBright,
   },
-  pctSymbol: { color: COLORS.textSecondary, marginLeft: 4, fontSize: 14 },
+  pctSymbol: { color: COLORS.primary, marginLeft: 4, fontSize: 13, fontWeight: '700' },
   excludeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    gap: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 12, gap: 12,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
   checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 22, height: 22, borderRadius: 2, borderWidth: 1,
+    borderColor: COLORS.border, alignItems: 'center', justifyContent: 'center',
   },
-  checkmark: { color: COLORS.text, fontSize: 13, fontWeight: '700' },
+  checkmark: { color: COLORS.background, fontSize: 12, fontWeight: '800' },
   saveBtn: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 18,
-    paddingVertical: 18,
-    alignItems: 'center',
-    marginTop: 32,
+    backgroundColor: COLORS.primary, borderRadius: 4,
+    paddingVertical: 18, alignItems: 'center', marginTop: 32,
   },
-  saveBtnText: { color: COLORS.text, fontSize: 17, fontWeight: '700' },
+  saveBtnText: {
+    color: COLORS.background, fontSize: 14, fontWeight: '900', letterSpacing: 4,
+  },
 });

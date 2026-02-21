@@ -6,14 +6,22 @@ import { COLORS } from '@/constants/theme';
 
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
   const icons: Record<string, string> = {
-    Home: '🏠',
-    Expenses: '🧾',
-    Balances: '⚖️',
-    Settle: '✅',
+    Home: '⬡',
+    Expenses: '◈',
+    Balances: '◎',
+    Settle: '◉',
   };
   return (
     <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ fontSize: focused ? 20 : 18 }}>{icons[label]}</Text>
+      <Text
+        style={{
+          fontSize: focused ? 22 : 18,
+          color: focused ? COLORS.primary : COLORS.textMuted,
+          // glow effect via text shadow not supported natively, but color is enough
+        }}
+      >
+        {icons[label]}
+      </Text>
     </View>
   );
 }
@@ -27,14 +35,16 @@ export default function TabLayout() {
         tabBarInactiveTintColor: COLORS.textMuted,
         tabBarStyle: {
           backgroundColor: COLORS.surface,
-          borderTopColor: COLORS.border,
+          borderTopColor: COLORS.primary,
           borderTopWidth: 1,
           paddingBottom: 4,
           height: 60,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
+          fontSize: 10,
+          fontWeight: '700',
+          letterSpacing: 1.5,
+          textTransform: 'uppercase',
         },
       }}
     >

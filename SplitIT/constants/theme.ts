@@ -1,6 +1,6 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * RETRO-FUTURISTIC Design System
+ * Deep space blacks · Neon cyan/magenta glows · Electric accents
  */
 
 import { Platform } from 'react-native';
@@ -8,30 +8,32 @@ import { Platform } from 'react-native';
 // ─── App-specific design tokens ───────────────────────────────────────────────
 
 export const COLORS = {
-  background: '#0F0F0F',
-  surface: '#1C1C1E',
-  card: '#2C2C2E',
-  cardAlt: '#3A3A3C',
-  primary: '#7C6FF7',
-  primaryLight: '#9D97FA',
-  secondary: '#FF6B6B',
-  success: '#30D158',
-  warning: '#FFD60A',
-  text: '#FFFFFF',
-  textSecondary: '#8E8E93',
-  textMuted: '#636366',
-  border: '#38383A',
-  danger: '#FF453A',
+  background: '#07070F',   // deep space black
+  surface: '#0D0D1A',   // dark navy
+  card: '#0F0F20',   // slightly lighter navy
+  cardAlt: '#161628',   // card highlight
+  primary: '#00F5FF',   // neon cyan
+  primaryDark: '#00A8B5',   // dimmed cyan
+  secondary: '#FF00CC',   // neon magenta
+  success: '#00FF88',   // electric green
+  warning: '#FFD200',   // amber gold
+  text: '#E8E8FF',   // soft white-blue
+  textSecondary: '#7878A8',   // muted purple-grey
+  textMuted: '#3A3A5C',   // very muted
+  border: '#00F5FF22', // neon cyan faint border
+  borderBright: '#00F5FF66', // neon cyan medium border
+  danger: '#FF2D55',   // neon red-pink
+  glow: '#00F5FF',   // for shadow/glow effects
 };
 
-export const CURRENCY = '₹';
+export const CURRENCY = '$';
 
 export const USERS = ['Gokul', 'Rohan', 'Akilesh'];
 
 export const USER_COLORS: Record<string, string> = {
-  Gokul: '#7C6FF7',
-  Rohan: '#30D158',
-  Akilesh: '#FF9F0A',
+  Gokul: '#00F5FF', // cyan
+  Rohan: '#00FF88', // electric green
+  Akilesh: '#FF00CC', // magenta
 };
 
 // ─── Expo Router / themed components ──────────────────────────────────────────
@@ -60,13 +62,9 @@ export const Colors = {
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
     sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
     serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: 'ui-monospace',
   },
   default: {

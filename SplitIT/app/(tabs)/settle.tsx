@@ -1,17 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Modal,
-  TextInput,
-  Alert,
-  ActivityIndicator,
-  SafeAreaView,
-  StatusBar,
-  RefreshControl,
+  View, Text, TouchableOpacity, StyleSheet, ScrollView,
+  Modal, TextInput, Alert, ActivityIndicator, SafeAreaView,
+  StatusBar, RefreshControl,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { getExpenses, getSettlements, addSettlement } from '@/utils/firestore';
@@ -33,24 +24,15 @@ export default function SettleScreen() {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     try {
-      const [expenses, settlements] = await Promise.all([
-        getExpenses(),
-        getSettlements(),
-      ]);
+      const [expenses, settlements] = await Promise.all([getExpenses(), getSettlements()]);
       setBalances(calculateNetBalances(expenses as any, settlements as any));
-      setHistory(
-        [...settlements].sort((a: any, b: any) => {
-          const aTime = a.date?.toDate ? a.date.toDate() : new Date(0);
-          const bTime = b.date?.toDate ? b.date.toDate() : new Date(0);
-          return bTime.getTime() - aTime.getTime();
-        })
-      );
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+      setHistory([...settlements].sort((a: any, b: any) => {
+        const aTime = a.date?.toDate ? a.date.toDate() : new Date(0);
+        const bTime = b.date?.toDate ? b.date.toDate() : new Date(0);
+        return bTime.getTime() - aTime.getTime();
+      }));
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); setRefreshing(false); }
   }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -65,41 +47,24 @@ export default function SettleScreen() {
 
   const handleSettle = async () => {
     const amt = parseFloat(settleAmount);
-    if (isNaN(amt) || amt <= 0) {
-      Alert.alert('Invalid amount', 'Please enter a valid amount.');
-      return;
-    }
+    if (isNaN(amt) || amt <= 0) { Alert.alert('INVALID', 'Enter a valid amount.'); return; }
     if (amt > selectedDebt!.amount + 0.01) {
-      Alert.alert(
-        'Too much',
-        `You only owe ${CURRENCY}${selectedDebt!.amount.toFixed(2)}`
-      );
+      Alert.alert('OVERFLOW', `Max: ${CURRENCY}${selectedDebt!.amount.toFixed(2)}`);
       return;
     }
     setSettling(true);
     try {
-      await addSettlement({
-        from: selectedDebt!.from,
-        to: selectedDebt!.to,
-        amount: amt,
-      });
+      await addSettlement({ from: selectedDebt!.from, to: selectedDebt!.to, amount: amt });
       setSelectedDebt(null);
       await load();
-    } catch {
-      Alert.alert('Error', 'Failed to record settlement. Try again.');
-    } finally {
-      setSettling(false);
-    }
+    } catch { Alert.alert('ERROR', 'Settlement failed. Try again.'); }
+    finally { setSettling(false); }
   };
 
   const formatDate = (ts: any) => {
     if (!ts) return '';
     const d = ts.toDate ? ts.toDate() : new Date(ts);
-    return d.toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
+    return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase();
   };
 
   return (
@@ -108,95 +73,61 @@ export default function SettleScreen() {
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => load(true)}
-            tintColor={COLORS.primary}
-          />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={COLORS.primary} />}
       >
-        <Text style={styles.title}>Settle Up</Text>
+        <Text style={styles.title}>SETTLE UP</Text>
+        <Text style={styles.titleSub}>// DEBT RESOLUTION SYSTEM</Text>
+        <View style={styles.divider} />
 
         {loading ? (
           <ActivityIndicator color={COLORS.primary} style={{ marginTop: 40 }} />
         ) : (
           <>
-            <Text style={styles.sectionLabel}>You owe</Text>
+            <Text style={styles.sectionLabel}>▸ YOU OWE</Text>
             {myDebts.length === 0 ? (
               <View style={styles.nilCard}>
-                <Text style={styles.nilText}>You don't owe anyone 🎉</Text>
+                <Text style={styles.nilText}>◉  NO ACTIVE DEBTS</Text>
               </View>
             ) : (
               myDebts.map((debt, i) => (
-                <View key={i} style={styles.debtCard}>
-                  <View
-                    style={[
-                      styles.debtAvatar,
-                      { backgroundColor: USER_COLORS[debt.to] + '22' },
-                    ]}
-                  >
-                    <Text
-                      style={[styles.debtAvatarText, { color: USER_COLORS[debt.to] }]}
-                    >
-                      {debt.to[0]}
-                    </Text>
+                <View key={i} style={[styles.debtCard, { borderLeftColor: COLORS.danger }]}>
+                  <View style={[styles.debtAvatar, { borderColor: USER_COLORS[debt.to] }]}>
+                    <Text style={[styles.debtAvatarText, { color: USER_COLORS[debt.to] }]}>{debt.to[0]}</Text>
                   </View>
                   <View style={styles.debtInfo}>
                     <Text style={styles.debtLabel}>
-                      You owe{' '}
-                      <Text style={{ color: USER_COLORS[debt.to] }}>{debt.to}</Text>
+                      YOU OWE{' '}
+                      <Text style={{ color: USER_COLORS[debt.to] }}>{debt.to.toUpperCase()}</Text>
                     </Text>
-                    <Text style={styles.debtAmount}>
-                      {CURRENCY}{debt.amount.toFixed(2)}
-                    </Text>
+                    <Text style={styles.debtAmount}>{CURRENCY}{debt.amount.toFixed(2)}</Text>
                   </View>
-                  <TouchableOpacity
-                    style={styles.settleBtn}
-                    onPress={() => openSettle(debt)}
-                  >
-                    <Text style={styles.settleBtnText}>Settle</Text>
+                  <TouchableOpacity style={styles.settleBtn} onPress={() => openSettle(debt)}>
+                    <Text style={styles.settleBtnText}>PAY</Text>
                   </TouchableOpacity>
                 </View>
               ))
             )}
 
-            <Text style={[styles.sectionLabel, { marginTop: 24 }]}>Owed to you</Text>
+            <Text style={[styles.sectionLabel, { marginTop: 24 }]}>▸ OWED TO YOU</Text>
             {owedToMe.length === 0 ? (
               <View style={styles.nilCard}>
-                <Text style={styles.nilText}>Nobody owes you right now</Text>
+                <Text style={styles.nilText}>◈  NOTHING INCOMING</Text>
               </View>
             ) : (
               owedToMe.map((debt, i) => (
-                <View key={i} style={[styles.debtCard, styles.debtCardReceive]}>
-                  <View
-                    style={[
-                      styles.debtAvatar,
-                      { backgroundColor: USER_COLORS[debt.from] + '22' },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.debtAvatarText,
-                        { color: USER_COLORS[debt.from] },
-                      ]}
-                    >
-                      {debt.from[0]}
-                    </Text>
+                <View key={i} style={[styles.debtCard, { borderLeftColor: COLORS.success }]}>
+                  <View style={[styles.debtAvatar, { borderColor: USER_COLORS[debt.from] }]}>
+                    <Text style={[styles.debtAvatarText, { color: USER_COLORS[debt.from] }]}>{debt.from[0]}</Text>
                   </View>
                   <View style={styles.debtInfo}>
                     <Text style={styles.debtLabel}>
-                      <Text style={{ color: USER_COLORS[debt.from] }}>
-                        {debt.from}
-                      </Text>{' '}
-                      owes you
+                      <Text style={{ color: USER_COLORS[debt.from] }}>{debt.from.toUpperCase()}</Text>
+                      {' '}OWES YOU
                     </Text>
-                    <Text style={[styles.debtAmount, { color: COLORS.success }]}>
-                      {CURRENCY}{debt.amount.toFixed(2)}
-                    </Text>
+                    <Text style={[styles.debtAmount, { color: COLORS.success }]}>{CURRENCY}{debt.amount.toFixed(2)}</Text>
                   </View>
-                  <View style={styles.waitBadge}>
-                    <Text style={styles.waitText}>Pending</Text>
+                  <View style={styles.pendingBadge}>
+                    <Text style={styles.pendingText}>WAIT</Text>
                   </View>
                 </View>
               ))
@@ -204,20 +135,18 @@ export default function SettleScreen() {
 
             {history.length > 0 && (
               <>
-                <Text style={[styles.sectionLabel, { marginTop: 24 }]}>History</Text>
+                <Text style={[styles.sectionLabel, { marginTop: 24 }]}>▸ HISTORY LOG</Text>
                 {history.slice(0, 10).map((s, i) => (
                   <View key={i} style={styles.historyCard}>
                     <View style={styles.historyLeft}>
                       <Text style={styles.historyText}>
-                        <Text style={{ color: USER_COLORS[s.from] }}>{s.from}</Text>
-                        {' paid '}
-                        <Text style={{ color: USER_COLORS[s.to] }}>{s.to}</Text>
+                        <Text style={{ color: USER_COLORS[s.from] }}>{s.from.toUpperCase()}</Text>
+                        {' → '}
+                        <Text style={{ color: USER_COLORS[s.to] }}>{s.to.toUpperCase()}</Text>
                       </Text>
                       <Text style={styles.historyDate}>{formatDate(s.date)}</Text>
                     </View>
-                    <Text style={styles.historyAmount}>
-                      {CURRENCY}{parseFloat(s.amount).toFixed(2)}
-                    </Text>
+                    <Text style={styles.historyAmount}>{CURRENCY}{parseFloat(s.amount).toFixed(2)}</Text>
                   </View>
                 ))}
               </>
@@ -226,21 +155,16 @@ export default function SettleScreen() {
         )}
       </ScrollView>
 
-      <Modal
-        visible={!!selectedDebt}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setSelectedDebt(null)}
-      >
+      <Modal visible={!!selectedDebt} transparent animationType="slide" onRequestClose={() => setSelectedDebt(null)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalSheet}>
             <View style={styles.handleBar} />
-            <Text style={styles.modalTitle}>Settle with {selectedDebt?.to}</Text>
+            <Text style={styles.modalTitle}>SETTLE DEBT</Text>
             <Text style={styles.modalSubtitle}>
-              You owe {CURRENCY}{selectedDebt?.amount.toFixed(2)} in total
+              Paying {selectedDebt?.to?.toUpperCase()}  ·  Max {CURRENCY}{selectedDebt?.amount.toFixed(2)}
             </Text>
 
-            <Text style={styles.inputLabel}>Amount to settle ({CURRENCY})</Text>
+            <Text style={styles.inputLabel}>AMOUNT ({CURRENCY})</Text>
             <TextInput
               style={styles.amountInput}
               value={settleAmount}
@@ -255,14 +179,11 @@ export default function SettleScreen() {
               <ActivityIndicator color={COLORS.primary} style={{ marginTop: 20 }} />
             ) : (
               <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={styles.cancelModalBtn}
-                  onPress={() => setSelectedDebt(null)}
-                >
-                  <Text style={styles.cancelModalText}>Cancel</Text>
+                <TouchableOpacity style={styles.cancelModalBtn} onPress={() => setSelectedDebt(null)}>
+                  <Text style={styles.cancelModalText}>[ ABORT ]</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.confirmBtn} onPress={handleSettle}>
-                  <Text style={styles.confirmBtnText}>Confirm</Text>
+                  <Text style={styles.confirmBtnText}>CONFIRM</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -276,132 +197,82 @@ export default function SettleScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   scroll: { padding: 20, paddingBottom: 40 },
-  title: { fontSize: 28, fontWeight: '800', color: COLORS.text, marginBottom: 24 },
+  title: { fontSize: 24, fontWeight: '900', color: COLORS.text, letterSpacing: 4 },
+  titleSub: { fontSize: 11, color: COLORS.textSecondary, letterSpacing: 1.5, marginTop: 4, fontWeight: '600' },
+  divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 16 },
   sectionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 12,
+    fontSize: 11, fontWeight: '700', color: COLORS.primary,
+    letterSpacing: 3, marginBottom: 10,
   },
   nilCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: 14,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    borderWidth: 1, borderColor: COLORS.border, borderRadius: 4,
+    padding: 16, alignItems: 'center',
   },
-  nilText: { color: COLORS.textSecondary, fontSize: 15 },
+  nilText: { color: COLORS.textSecondary, fontSize: 12, letterSpacing: 2, fontWeight: '700' },
   debtCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: 16,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    backgroundColor: COLORS.card, borderRadius: 4, padding: 14,
+    flexDirection: 'row', alignItems: 'center', marginBottom: 8,
+    borderWidth: 1, borderColor: COLORS.border, borderLeftWidth: 3,
   },
-  debtCardReceive: { borderColor: COLORS.success + '44' },
   debtAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
+    width: 42, height: 42, borderRadius: 2, borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center', marginRight: 12,
   },
-  debtAvatarText: { fontSize: 18, fontWeight: '700' },
+  debtAvatarText: { fontSize: 17, fontWeight: '800' },
   debtInfo: { flex: 1 },
-  debtLabel: { fontSize: 14, color: COLORS.textSecondary, marginBottom: 2 },
-  debtAmount: { fontSize: 20, fontWeight: '800', color: COLORS.danger },
+  debtLabel: { fontSize: 11, color: COLORS.textSecondary, marginBottom: 3, letterSpacing: 1.5, fontWeight: '700' },
+  debtAmount: { fontSize: 20, fontWeight: '900', color: COLORS.danger, letterSpacing: 1 },
   settleBtn: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.primary,
+    borderRadius: 2, paddingHorizontal: 14, paddingVertical: 9,
   },
-  settleBtnText: { color: COLORS.text, fontWeight: '700', fontSize: 14 },
-  waitBadge: {
-    backgroundColor: COLORS.success + '22',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+  settleBtnText: { color: COLORS.primary, fontWeight: '800', fontSize: 11, letterSpacing: 2 },
+  pendingBadge: {
+    borderWidth: 1, borderColor: COLORS.success + '66', borderRadius: 2,
+    paddingHorizontal: 10, paddingVertical: 7,
   },
-  waitText: { color: COLORS.success, fontSize: 13, fontWeight: '600' },
+  pendingText: { color: COLORS.success, fontSize: 10, fontWeight: '800', letterSpacing: 2 },
   historyCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: COLORS.card,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: COLORS.card, borderRadius: 4, padding: 12, marginBottom: 6,
+    borderWidth: 1, borderColor: COLORS.border,
   },
   historyLeft: { flex: 1 },
-  historyText: { fontSize: 14, color: COLORS.text, marginBottom: 2 },
-  historyDate: { fontSize: 12, color: COLORS.textMuted },
-  historyAmount: { fontSize: 16, fontWeight: '700', color: COLORS.success },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.6)',
-  },
+  historyText: { fontSize: 13, color: COLORS.text, marginBottom: 2, fontWeight: '600' },
+  historyDate: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 1.5, fontWeight: '600' },
+  historyAmount: { fontSize: 15, fontWeight: '800', color: COLORS.success, letterSpacing: 1 },
+  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.85)' },
   modalSheet: {
-    backgroundColor: COLORS.surface,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: 24,
-    paddingBottom: 40,
+    backgroundColor: COLORS.surface, borderTopWidth: 2, borderTopColor: COLORS.primary,
+    padding: 24, paddingBottom: 40,
   },
   handleBar: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: COLORS.border,
-    alignSelf: 'center',
-    marginBottom: 20,
+    width: 40, height: 3, backgroundColor: COLORS.primary,
+    alignSelf: 'center', marginBottom: 20, opacity: 0.6,
   },
-  modalTitle: { fontSize: 22, fontWeight: '700', color: COLORS.text, marginBottom: 6 },
-  modalSubtitle: { fontSize: 14, color: COLORS.textSecondary, marginBottom: 24 },
+  modalTitle: {
+    fontSize: 20, fontWeight: '900', color: COLORS.text,
+    letterSpacing: 4, marginBottom: 6,
+  },
+  modalSubtitle: { fontSize: 13, color: COLORS.textSecondary, marginBottom: 24, letterSpacing: 0.5 },
   inputLabel: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    fontWeight: '600',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
+    fontSize: 11, color: COLORS.textSecondary, fontWeight: '700',
+    marginBottom: 8, textTransform: 'uppercase', letterSpacing: 2,
   },
   amountInput: {
-    backgroundColor: COLORS.card,
-    borderRadius: 14,
-    padding: 16,
-    color: COLORS.text,
-    fontSize: 24,
-    fontWeight: '700',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    textAlign: 'center',
+    backgroundColor: COLORS.card, borderRadius: 4, padding: 16,
+    color: COLORS.primary, fontSize: 28, fontWeight: '900',
+    borderWidth: 1, borderColor: COLORS.borderBright, textAlign: 'center', letterSpacing: 2,
   },
   modalActions: { flexDirection: 'row', gap: 12, marginTop: 24 },
   cancelModalBtn: {
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 14,
-    backgroundColor: COLORS.card,
-    alignItems: 'center',
+    flex: 1, paddingVertical: 16, borderRadius: 4,
+    borderWidth: 1, borderColor: COLORS.border, alignItems: 'center',
   },
-  cancelModalText: { color: COLORS.textSecondary, fontSize: 16, fontWeight: '600' },
+  cancelModalText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '700', letterSpacing: 3 },
   confirmBtn: {
-    flex: 2,
-    paddingVertical: 16,
-    borderRadius: 14,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
+    flex: 2, paddingVertical: 16, borderRadius: 4,
+    backgroundColor: COLORS.primary, alignItems: 'center',
   },
-  confirmBtnText: { color: COLORS.text, fontSize: 16, fontWeight: '700' },
+  confirmBtnText: { color: COLORS.background, fontSize: 14, fontWeight: '900', letterSpacing: 3 },
 });

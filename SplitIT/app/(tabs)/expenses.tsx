@@ -18,36 +18,33 @@ function formatDate(timestamp: any) {
   const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
   const now = new Date();
   const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Yesterday';
-  return date.toLocaleDateString('en-IN', {
+  if (diffDays === 0) return 'TODAY';
+  if (diffDays === 1) return 'YESTERDAY';
+  return date.toLocaleDateString('en-US', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
-  });
+  }).toUpperCase();
 }
 
 function splitLabel(splitType: string) {
   switch (splitType) {
-    case 'equal':
-      return 'Equal';
-    case 'percentage':
-      return '% Split';
-    case 'exclude':
-      return 'Custom';
-    default:
-      return splitType;
+    case 'equal': return 'EQL';
+    case 'percentage': return 'PCT';
+    case 'exclude': return 'CST';
+    default: return splitType.toUpperCase();
   }
 }
 
 function ExpenseCard({ item }: { item: any }) {
   const splitEntries = item.splits ? Object.entries(item.splits) : [];
+  const paidColor = USER_COLORS[item.paidBy] ?? COLORS.primary;
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { borderLeftColor: paidColor }]}>
       <View style={styles.cardTop}>
         <View style={styles.cardLeft}>
-          <Text style={styles.cardTitle}>{item.title}</Text>
+          <Text style={styles.cardTitle}>{item.title.toUpperCase()}</Text>
           <Text style={styles.cardDate}>{formatDate(item.date)}</Text>
         </View>
         <Text style={styles.cardAmount}>
@@ -56,9 +53,9 @@ function ExpenseCard({ item }: { item: any }) {
       </View>
 
       <View style={styles.cardMeta}>
-        <View style={[styles.badge, { backgroundColor: USER_COLORS[item.paidBy] + '22' }]}>
-          <Text style={[styles.badgeText, { color: USER_COLORS[item.paidBy] }]}>
-            Paid by {item.paidBy}
+        <View style={[styles.badge, { borderColor: paidColor }]}>
+          <Text style={[styles.badgeText, { color: paidColor }]}>
+            {item.paidBy.toUpperCase()}
           </Text>
         </View>
         <View style={styles.badge}>
@@ -68,7 +65,7 @@ function ExpenseCard({ item }: { item: any }) {
 
       <View style={styles.splitsRow}>
         {splitEntries.map(([name, amount]) => (
-          <View key={name} style={styles.splitChip}>
+          <View key={name} style={[styles.splitChip, { borderColor: USER_COLORS[name] + '55' }]}>
             <Text style={[styles.splitChipName, { color: USER_COLORS[name] }]}>
               {name[0]}
             </Text>
@@ -115,9 +112,16 @@ export default function ExpensesScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Expenses</Text>
-        <Text style={styles.headerCount}>{expenses.length} total</Text>
+        <View>
+          <Text style={styles.headerTitle}>EXPENSES</Text>
+          <Text style={styles.headerSub}>// TRANSACTION LOG</Text>
+        </View>
+        <View style={styles.countBadge}>
+          <Text style={styles.countText}>{expenses.length}</Text>
+        </View>
       </View>
+      <View style={styles.headerDivider} />
+
       <FlatList
         data={expenses}
         keyExtractor={(item) => item.id}
@@ -133,9 +137,9 @@ export default function ExpensesScreen() {
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>🧾</Text>
-            <Text style={styles.emptyText}>No expenses yet</Text>
-            <Text style={styles.emptySubtext}>Add one from the Home tab</Text>
+            <Text style={styles.emptyIcon}>◈</Text>
+            <Text style={styles.emptyText}>NO RECORDS FOUND</Text>
+            <Text style={styles.emptySubtext}>Log an expense from the Home tab</Text>
           </View>
         }
       />
@@ -147,22 +151,53 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 12,
   },
-  headerTitle: { fontSize: 28, fontWeight: '800', color: COLORS.text },
-  headerCount: { fontSize: 14, color: COLORS.textSecondary },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: COLORS.text,
+    letterSpacing: 4,
+  },
+  headerSub: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    letterSpacing: 1.5,
+    marginTop: 2,
+    fontWeight: '600',
+  },
+  countBadge: {
+    borderWidth: 1,
+    borderColor: COLORS.borderBright,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 2,
+  },
+  countText: {
+    color: COLORS.primary,
+    fontWeight: '800',
+    fontSize: 14,
+    letterSpacing: 1,
+  },
+  headerDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginHorizontal: 20,
+    marginBottom: 8,
+  },
   listContent: { padding: 16, paddingBottom: 40 },
   card: {
     backgroundColor: COLORS.card,
-    borderRadius: 18,
+    borderRadius: 4,
     padding: 16,
-    marginBottom: 12,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: COLORS.border,
+    borderLeftWidth: 3,
   },
   cardTop: {
     flexDirection: 'row',
@@ -171,35 +206,71 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   cardLeft: { flex: 1, marginRight: 12 },
-  cardTitle: { fontSize: 17, fontWeight: '700', color: COLORS.text, marginBottom: 3 },
-  cardDate: { fontSize: 12, color: COLORS.textSecondary },
-  cardAmount: { fontSize: 20, fontWeight: '800', color: COLORS.text },
-  cardMeta: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  badge: {
-    backgroundColor: COLORS.cardAlt,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: COLORS.text,
+    marginBottom: 4,
+    letterSpacing: 1.5,
   },
-  badgeText: { fontSize: 12, fontWeight: '600', color: COLORS.textSecondary },
-  splitsRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  cardDate: {
+    fontSize: 10,
+    color: COLORS.textSecondary,
+    letterSpacing: 2,
+    fontWeight: '600',
+  },
+  cardAmount: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: COLORS.text,
+    letterSpacing: 1,
+  },
+  cardMeta: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+  badge: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    letterSpacing: 1.5,
+  },
+  splitsRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   splitChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.cardAlt,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    gap: 4,
+    borderRadius: 2,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    gap: 6,
   },
-  splitChipName: { fontSize: 13, fontWeight: '700' },
+  splitChipName: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
   splitChipAmount: {
-    fontSize: 13,
+    fontSize: 12,
     color: COLORS.textSecondary,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   empty: { alignItems: 'center', paddingTop: 80 },
-  emptyIcon: { fontSize: 48, marginBottom: 12 },
-  emptyText: { fontSize: 20, fontWeight: '700', color: COLORS.text, marginBottom: 6 },
-  emptySubtext: { fontSize: 14, color: COLORS.textSecondary },
+  emptyIcon: {
+    fontSize: 40,
+    color: COLORS.primary,
+    marginBottom: 12,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.text,
+    letterSpacing: 4,
+    marginBottom: 6,
+  },
+  emptySubtext: { fontSize: 13, color: COLORS.textSecondary },
 });

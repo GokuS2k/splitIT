@@ -15,7 +15,7 @@ import { hashPin } from '@/utils/pinHash';
 import { useAuth } from '@/context/AuthContext';
 import { COLORS, USERS, USER_COLORS } from '@/constants/theme';
 
-// ─── PIN Pad Component ────────────────────────────────────────────────────────
+// ─── PIN Pad ──────────────────────────────────────────────────────────────────
 
 function PinDots({ length }: { length: number }) {
   return (
@@ -87,7 +87,7 @@ export default function LoginScreen() {
       setConfirmMode(false);
       setModalVisible(true);
     } catch {
-      Alert.alert('Error', 'Could not connect to server. Try again.');
+      Alert.alert('CONNECTION ERROR', 'Could not reach server. Try again.');
     } finally {
       setChecking(false);
     }
@@ -118,7 +118,7 @@ export default function LoginScreen() {
         return;
       }
       if (pin !== submittedPin) {
-        Alert.alert('Mismatch', 'PINs do not match. Try again.');
+        Alert.alert('PIN MISMATCH', 'Your codes don\'t match. Try again.');
         setPin('');
         setConfirmPin('');
         setConfirmMode(false);
@@ -131,24 +131,24 @@ export default function LoginScreen() {
         setModalVisible(false);
         login(selectedUser!);
       } catch {
-        Alert.alert('Error', 'Could not save PIN. Try again.');
+        Alert.alert('SYSTEM ERROR', 'Could not save PIN. Try again.');
       } finally {
         setLoading(false);
       }
     } else {
       setLoading(true);
       try {
-        const user = await getUser(selectedUser!);
+        const userFound = await getUser(selectedUser!);
         const hashed = await hashPin(submittedPin);
-        if (hashed === user.pin) {
+        if (userFound && hashed === userFound.pin) {
           setModalVisible(false);
           login(selectedUser!);
         } else {
-          Alert.alert('Wrong PIN', 'Incorrect PIN. Please try again.');
+          Alert.alert('ACCESS DENIED', 'Incorrect PIN. Try again.');
           setPin('');
         }
       } catch {
-        Alert.alert('Error', 'Could not verify PIN. Try again.');
+        Alert.alert('SYSTEM ERROR', 'Could not verify PIN. Try again.');
       } finally {
         setLoading(false);
       }
@@ -163,43 +163,57 @@ export default function LoginScreen() {
   };
 
   const getModalTitle = () => {
-    if (isFirstTime) {
-      return confirmMode ? 'Confirm your PIN' : 'Create a 4-digit PIN';
-    }
-    return `Welcome back, ${selectedUser}`;
+    if (isFirstTime) return confirmMode ? 'CONFIRM CODE' : 'CREATE CODE';
+    return `WELCOME BACK`;
   };
 
   const getModalSubtitle = () => {
     if (isFirstTime) {
-      return confirmMode ? 'Re-enter your PIN to confirm' : 'Choose a PIN to secure your account';
+      return confirmMode
+        ? 'Re-enter your 4-digit security code'
+        : 'Set a 4-digit access code';
     }
-    return 'Enter your PIN to continue';
+    return `Identity: ${selectedUser}  ·  Enter your code`;
+  };
+
+  const getStepLabel = () => {
+    if (isFirstTime) return confirmMode ? 'STEP 02 / 02' : 'STEP 01 / 02';
+    return null;
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.appName}>SplitIT</Text>
-        <Text style={styles.tagline}>Split expenses. Stay friends.</Text>
+        <Text style={styles.appName}>SPLIT<Text style={styles.appNameAccent}>IT</Text></Text>
+        <View style={styles.headerLine} />
+        <Text style={styles.tagline}>// EXPENSE PROTOCOL v1.0</Text>
       </View>
 
-      <Text style={styles.prompt}>Who are you?</Text>
+      {/* Prompt */}
+      <Text style={styles.prompt}>▸ SELECT OPERATOR</Text>
 
+      {/* User Cards */}
       <View style={styles.cardsContainer}>
         {USERS.map((name) => (
           <TouchableOpacity
             key={name}
-            style={[styles.card, { borderColor: USER_COLORS[name] }]}
+            style={[
+              styles.card,
+              { borderColor: USER_COLORS[name] },
+            ]}
             onPress={() => handleUserSelect(name)}
             disabled={checking}
           >
-            <View style={[styles.avatar, { backgroundColor: USER_COLORS[name] + '22' }]}>
+            <View style={[styles.avatar, { backgroundColor: USER_COLORS[name] + '18' }]}>
               <Text style={[styles.avatarText, { color: USER_COLORS[name] }]}>
                 {name[0]}
               </Text>
             </View>
-            <Text style={styles.cardName}>{name}</Text>
+            <Text style={[styles.cardName, { color: USER_COLORS[name] }]}>{name}</Text>
+            <View style={[styles.cardDot, { backgroundColor: USER_COLORS[name] }]} />
           </TouchableOpacity>
         ))}
       </View>
@@ -208,6 +222,7 @@ export default function LoginScreen() {
         <ActivityIndicator color={COLORS.primary} style={{ marginTop: 20 }} />
       )}
 
+      {/* PIN Modal */}
       <Modal
         visible={modalVisible}
         transparent
@@ -217,9 +232,15 @@ export default function LoginScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalSheet}>
             <View style={styles.handleBar} />
+
+            {getStepLabel() && (
+              <Text style={styles.stepLabel}>{getStepLabel()}</Text>
+            )}
             <Text style={styles.modalTitle}>{getModalTitle()}</Text>
             <Text style={styles.modalSubtitle}>{getModalSubtitle()}</Text>
+
             <PinDots length={currentPin.length} />
+
             {loading ? (
               <ActivityIndicator
                 color={COLORS.primary}
@@ -229,8 +250,9 @@ export default function LoginScreen() {
             ) : (
               <PinPad onPress={handleDigit} onDelete={handleDelete} />
             )}
+
             <TouchableOpacity onPress={closeModal} style={styles.cancelBtn}>
-              <Text style={styles.cancelText}>Cancel</Text>
+              <Text style={styles.cancelText}>[ ABORT ]</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -251,99 +273,131 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   appName: {
-    fontSize: 40,
-    fontWeight: '800',
+    fontSize: 44,
+    fontWeight: '900',
+    color: COLORS.text,
+    letterSpacing: 6,
+  },
+  appNameAccent: {
     color: COLORS.primary,
-    letterSpacing: -1,
+  },
+  headerLine: {
+    width: 120,
+    height: 1,
+    backgroundColor: COLORS.primary,
+    marginVertical: 10,
+    opacity: 0.6,
   },
   tagline: {
-    fontSize: 14,
+    fontSize: 11,
     color: COLORS.textSecondary,
-    marginTop: 4,
+    letterSpacing: 2,
+    fontWeight: '600',
   },
   prompt: {
-    fontSize: 22,
+    fontSize: 13,
     fontWeight: '700',
-    color: COLORS.text,
+    color: COLORS.primary,
+    letterSpacing: 3,
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
   },
   cardsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 12,
+    gap: 10,
   },
   card: {
     flex: 1,
     backgroundColor: COLORS.card,
-    borderRadius: 20,
+    borderRadius: 4,
     padding: 20,
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderWidth: 1,
+    borderLeftWidth: 3,
   },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 52,
+    height: 52,
+    borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
   },
   avatarText: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '800',
   },
   cardName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.text,
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 1.5,
   },
+  cardDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginTop: 8,
+    opacity: 0.8,
+  },
+  // ── Modal ────────────────────────────────────────────────────────────────────
   modalOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.85)',
   },
   modalSheet: {
     backgroundColor: COLORS.surface,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderTopWidth: 2,
+    borderTopColor: COLORS.primary,
     paddingHorizontal: 24,
     paddingBottom: 40,
     alignItems: 'center',
   },
   handleBar: {
     width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: COLORS.border,
-    marginTop: 12,
-    marginBottom: 24,
+    height: 3,
+    borderRadius: 0,
+    backgroundColor: COLORS.primary,
+    marginTop: 14,
+    marginBottom: 20,
+    opacity: 0.6,
+  },
+  stepLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.primary,
+    letterSpacing: 3,
+    marginBottom: 6,
   },
   modalTitle: {
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: '900',
     color: COLORS.text,
+    letterSpacing: 4,
     textAlign: 'center',
   },
   modalSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: COLORS.textSecondary,
     textAlign: 'center',
     marginTop: 6,
-    marginBottom: 32,
+    marginBottom: 28,
+    letterSpacing: 0.5,
   },
   dotsRow: {
     flexDirection: 'row',
-    gap: 16,
-    marginBottom: 36,
+    gap: 20,
+    marginBottom: 32,
   },
   dot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    borderWidth: 2,
-    borderColor: COLORS.border,
+    width: 12,
+    height: 12,
+    borderRadius: 0,
+    borderWidth: 1,
+    borderColor: COLORS.borderBright,
     backgroundColor: 'transparent',
   },
   dotFilled: {
@@ -352,28 +406,32 @@ const styles = StyleSheet.create({
   },
   padContainer: {
     width: '100%',
-    gap: 8,
+    gap: 10,
   },
   padRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 8,
+    gap: 10,
   },
   padKey: {
     width: 80,
-    height: 64,
-    borderRadius: 16,
+    height: 60,
+    borderRadius: 4,
     backgroundColor: COLORS.card,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   padKeyEmpty: {
     backgroundColor: 'transparent',
+    borderColor: 'transparent',
   },
   padKeyText: {
-    fontSize: 24,
-    fontWeight: '500',
+    fontSize: 20,
+    fontWeight: '700',
     color: COLORS.text,
+    letterSpacing: 1,
   },
   cancelBtn: {
     marginTop: 24,
@@ -382,6 +440,8 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     color: COLORS.textSecondary,
-    fontSize: 16,
+    fontSize: 13,
+    letterSpacing: 3,
+    fontWeight: '700',
   },
 });
