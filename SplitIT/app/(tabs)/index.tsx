@@ -1,98 +1,246 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import React, { useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+  SafeAreaView,
+  StatusBar,
+} from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { getExpenses, getSettlements } from '@/utils/firestore';
+import { calculateNetBalances, getUserSummary } from '@/utils/balanceCalculator';
+import { useAuth } from '@/context/AuthContext';
+import { COLORS, CURRENCY, USER_COLORS } from '@/constants/theme';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const router = useRouter();
+  const { user, logout } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState<{
+    owedToMe: { from: string; amount: number }[];
+    iOwe: { to: string; amount: number }[];
+  }>({ owedToMe: [], iOwe: [] });
+  const [totalOwedToMe, setTotalOwedToMe] = useState(0);
+  const [totalIOwe, setTotalIOwe] = useState(0);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [expenses, settlements] = await Promise.all([
+        getExpenses(),
+        getSettlements(),
+      ]);
+      const balances = calculateNetBalances(expenses as any, settlements as any);
+      const s = getUserSummary(user!, balances);
+      setSummary(s);
+      setTotalOwedToMe(s.owedToMe.reduce((acc, b) => acc + b.amount, 0));
+      setTotalIOwe(s.iOwe.reduce((acc, b) => acc + b.amount, 0));
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
+
+  const netBalance = totalOwedToMe - totalIOwe;
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.topRow}>
+          <View>
+            <Text style={styles.greeting}>Hey, {user} 👋</Text>
+            <Text style={styles.subGreeting}>Here's your balance</Text>
+          </View>
+          <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
+            <Text style={styles.logoutText}>Log out</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View
+          style={[
+            styles.netCard,
+            {
+              borderColor:
+                netBalance > 0
+                  ? COLORS.success + '55'
+                  : netBalance < 0
+                  ? COLORS.danger + '55'
+                  : COLORS.border,
+            },
+          ]}
+        >
+          <Text style={styles.netLabel}>
+            {netBalance > 0
+              ? 'You are owed'
+              : netBalance < 0
+              ? 'You owe overall'
+              : 'All settled up!'}
+          </Text>
+          {netBalance !== 0 && (
+            <Text
+              style={[
+                styles.netAmount,
+                { color: netBalance > 0 ? COLORS.success : COLORS.danger },
+              ]}
+            >
+              {CURRENCY}{Math.abs(netBalance).toFixed(2)}
+            </Text>
+          )}
+        </View>
+
+        {loading ? (
+          <ActivityIndicator color={COLORS.primary} style={{ marginTop: 40 }} />
+        ) : (
+          <>
+            {summary.owedToMe.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Owed to you</Text>
+                {summary.owedToMe.map(({ from, amount }) => (
+                  <View key={from} style={styles.balanceRow}>
+                    <View style={styles.avatarSmall}>
+                      <Text style={[styles.avatarLetter, { color: USER_COLORS[from] }]}>
+                        {from[0]}
+                      </Text>
+                    </View>
+                    <Text style={styles.balanceName}>{from}</Text>
+                    <Text style={[styles.balanceAmount, { color: COLORS.success }]}>
+                      +{CURRENCY}{amount.toFixed(2)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {summary.iOwe.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>You owe</Text>
+                {summary.iOwe.map(({ to, amount }) => (
+                  <View key={to} style={styles.balanceRow}>
+                    <View style={styles.avatarSmall}>
+                      <Text style={[styles.avatarLetter, { color: USER_COLORS[to] }]}>
+                        {to[0]}
+                      </Text>
+                    </View>
+                    <Text style={styles.balanceName}>{to}</Text>
+                    <Text style={[styles.balanceAmount, { color: COLORS.danger }]}>
+                      -{CURRENCY}{amount.toFixed(2)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {summary.owedToMe.length === 0 &&
+              summary.iOwe.length === 0 &&
+              !loading && (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyIcon}>🎉</Text>
+                  <Text style={styles.emptyText}>All settled up!</Text>
+                  <Text style={styles.emptySubtext}>No pending balances</Text>
+                </View>
+              )}
+          </>
+        )}
+
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => router.push('/add-expense')}
+        >
+          <Text style={styles.addButtonText}>+ Add Expense</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: { flex: 1, backgroundColor: COLORS.background },
+  scroll: { padding: 20, paddingBottom: 40 },
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 24,
+  },
+  greeting: { fontSize: 26, fontWeight: '800', color: COLORS.text },
+  subGreeting: { fontSize: 14, color: COLORS.textSecondary, marginTop: 2 },
+  logoutBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    backgroundColor: COLORS.card,
+    borderRadius: 10,
+  },
+  logoutText: { color: COLORS.textSecondary, fontSize: 13 },
+  netCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    marginBottom: 28,
+    borderWidth: 1,
+  },
+  netLabel: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  netAmount: { fontSize: 40, fontWeight: '800', letterSpacing: -1 },
+  section: { marginBottom: 24 },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 12,
+  },
+  balanceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
+    backgroundColor: COLORS.card,
+    borderRadius: 14,
+    padding: 14,
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  avatarSmall: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.cardAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
+  avatarLetter: { fontSize: 16, fontWeight: '700' },
+  balanceName: { flex: 1, fontSize: 16, fontWeight: '500', color: COLORS.text },
+  balanceAmount: { fontSize: 17, fontWeight: '700' },
+  emptyState: { alignItems: 'center', paddingVertical: 40 },
+  emptyIcon: { fontSize: 48, marginBottom: 12 },
+  emptyText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 6,
+  },
+  emptySubtext: { fontSize: 14, color: COLORS.textSecondary },
+  addButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 18,
+    paddingVertical: 18,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  addButtonText: { color: COLORS.text, fontSize: 17, fontWeight: '700' },
 });
