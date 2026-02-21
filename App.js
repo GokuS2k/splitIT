@@ -14,6 +14,7 @@ import AddExpenseScreen from './screens/AddExpenseScreen';
 import ExpensesListScreen from './screens/ExpensesListScreen';
 import BalancesScreen from './screens/BalancesScreen';
 import SettleUpScreen from './screens/SettleUpScreen';
+import ScanReceiptScreen from './screens/ScanReceiptScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -80,6 +81,14 @@ function RootNavigator() {
           <Stack.Screen
             name="AddExpense"
             component={AddExpenseScreen}
+            options={{
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+            }}
+          />
+          <Stack.Screen
+            name="ScanReceipt"
+            component={ScanReceiptScreen}
             options={{
               presentation: 'modal',
               animation: 'slide_from_bottom',

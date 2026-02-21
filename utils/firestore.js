@@ -42,6 +42,65 @@ export async function getExpenses() {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
+export async function saveReceiptScan({ createdBy, imageUrl, rawOcrText, parsed, groupId = 'default-group' }) {
+  const ref = await addDoc(collection(db, 'receipt_scans'), {
+    groupId,
+    createdBy,
+    imageUrl,
+    rawOcrText,
+    parsed,
+    createdAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+export async function getReceiptScans(groupId = 'default-group') {
+  const q = query(collection(db, 'receipt_scans'), orderBy('createdAt', 'desc'));
+  const snap = await getDocs(q);
+  return snap.docs
+    .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+    .filter((scan) => scan.groupId === groupId);
+}
+
+export async function saveSplitExpense({
+  groupId,
+  createdBy,
+  members,
+  items,
+  allocations,
+  subtotal,
+  tax,
+  total,
+  computedTotals,
+  taxMode,
+  receiptScanId,
+}) {
+  const ref = await addDoc(collection(db, 'expenses_v2'), {
+    groupId,
+    createdBy,
+    members,
+    items,
+    allocations,
+    subtotal,
+    tax,
+    total,
+    computedTotals,
+    taxMode,
+    receiptScanId,
+    createdAt: serverTimestamp(),
+  });
+
+  return ref.id;
+}
+
+export async function getSplitExpenses(groupId = 'default-group') {
+  const q = query(collection(db, 'expenses_v2'), orderBy('createdAt', 'desc'));
+  const snap = await getDocs(q);
+  return snap.docs
+    .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+    .filter((expense) => expense.groupId === groupId);
+}
+
 // ─── Settlements ──────────────────────────────────────────────────────────────
 
 export async function addSettlement({ from, to, amount }) {
