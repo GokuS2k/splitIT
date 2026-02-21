@@ -187,9 +187,22 @@ export default function LoginScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.appName}>SPLIT<Text style={styles.appNameAccent}>IT</Text></Text>
-        <View style={styles.headerLine} />
-        <Text style={styles.tagline}>// EXPENSE PROTOCOL v1.0</Text>
+        <View style={styles.logoFrame}>
+          <View style={styles.logoGlow} />
+          <Text style={styles.appName}>SPLIT<Text style={styles.appNameAccent}>IT</Text></Text>
+          <Text style={styles.tagline}>SYNTHWAVE EXPENSE TRACKER</Text>
+        </View>
+
+        <View style={styles.gridFloor}>
+          {[...Array(5)].map((_, idx) => (
+            <View key={`h-${idx}`} style={[styles.gridLineHorizontal, { opacity: 0.26 - idx * 0.04 }]} />
+          ))}
+          <View style={styles.gridVerticalWrap}>
+            {[...Array(7)].map((_, idx) => (
+              <View key={`v-${idx}`} style={[styles.gridLineVertical, { opacity: idx === 3 ? 0.28 : 0.16 }]} />
+            ))}
+          </View>
+        </View>
       </View>
 
       {/* Prompt */}
@@ -268,31 +281,73 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   header: {
-    marginTop: 48,
-    marginBottom: 48,
+    marginTop: 36,
+    marginBottom: 42,
     alignItems: 'center',
   },
+  logoFrame: {
+    width: '100%',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    paddingVertical: 18,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  logoGlow: {
+    position: 'absolute',
+    top: -28,
+    width: 180,
+    height: 70,
+    borderRadius: 40,
+    backgroundColor: COLORS.secondary,
+    opacity: 0.16,
+  },
   appName: {
-    fontSize: 44,
+    fontSize: 40,
     fontWeight: '900',
     color: COLORS.text,
-    letterSpacing: 6,
+    letterSpacing: 5,
+    textShadowColor: COLORS.glow,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
   },
   appNameAccent: {
     color: COLORS.primary,
   },
-  headerLine: {
-    width: 120,
-    height: 1,
-    backgroundColor: COLORS.primary,
-    marginVertical: 10,
-    opacity: 0.6,
-  },
   tagline: {
-    fontSize: 11,
+    marginTop: 8,
+    fontSize: 10,
     color: COLORS.textSecondary,
-    letterSpacing: 2,
-    fontWeight: '600',
+    letterSpacing: 2.2,
+    fontWeight: '700',
+  },
+  gridFloor: {
+    width: '100%',
+    marginTop: 8,
+    height: 64,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    justifyContent: 'space-evenly',
+    overflow: 'hidden',
+  },
+  gridLineHorizontal: {
+    width: '100%',
+    borderTopWidth: 1,
+    borderTopColor: COLORS.primary,
+  },
+  gridVerticalWrap: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+  },
+  gridLineVertical: {
+    height: '100%',
+    borderLeftWidth: 1,
+    borderLeftColor: COLORS.secondary,
   },
   prompt: {
     fontSize: 13,
