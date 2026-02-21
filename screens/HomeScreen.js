@@ -150,6 +150,13 @@ export default function HomeScreen({ navigation }) {
         >
           <Text style={styles.addButtonText}>+ Add Expense</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.addButton, styles.scanButton]}
+          onPress={() => navigation.navigate('ScanReceipt')}
+        >
+          <Text style={styles.addButtonText}>🧾 Scan Receipt</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -281,5 +288,8 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontSize: 17,
     fontWeight: '700',
+  },
+  scanButton: {
+    backgroundColor: COLORS.cardAlt,
   },
 });
